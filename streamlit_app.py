@@ -3,7 +3,7 @@ import streamlit as st
 
 week1_page = st.Page(
     ".pages/week1.py",
-    title="Week 1",
+    title="Week 1"
 )
 
 week2_page = st.Page(
