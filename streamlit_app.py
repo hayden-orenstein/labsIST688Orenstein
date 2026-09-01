@@ -4,13 +4,11 @@ import streamlit as st
 week1_page = st.Page(
     ".pages/week1.py",
     title="Week 1",
-    icon=":material/description:"
 )
 
 week2_page = st.Page(
     ".pages/week2.py",
     title="Week 2",
-    icon=":material/description:",
     default= True
 )
 
