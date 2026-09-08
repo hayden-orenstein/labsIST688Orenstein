@@ -14,7 +14,8 @@ if "client" not in st.session_state:
 model_to_use = "gpt-5-nano"
 
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = \
+        [{"role": "assistant", "content": "How can I help you?"}]
 
 
 for msg in st.session_state.messages:
