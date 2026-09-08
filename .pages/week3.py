@@ -27,19 +27,16 @@ for msg in st.session_state.messages:
 
 def get_conversation_buffer(messages):
 
-    # Find locations of all user messages
     user_indices = []
 
     for i in range(len(messages)):
         if messages[i]["role"] == "user":
             user_indices.append(i)
 
-    # If we have 2 or fewer user messages,
-    # send the entire conversation
+
     if len(user_indices) <= 2:
         return messages
 
-    # Start at the second-most-recent user message
     start_index = user_indices[-2]
 
     return messages[start_index:]
