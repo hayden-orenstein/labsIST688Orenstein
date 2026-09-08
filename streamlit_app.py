@@ -8,13 +8,13 @@ week1_page = st.Page(
 
 week2_page = st.Page(
     ".pages/week2.py",
-    title="Week 2",
-    default= True
+    title="Week 2"
 )
 
 week3_page = st.Page(
     ".pages/week3.py",
-    title="Week 3"
+    title="Week 3",
+    default= True
 )
 
 
