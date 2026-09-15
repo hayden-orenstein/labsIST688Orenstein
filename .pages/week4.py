@@ -1,22 +1,21 @@
 import streamlit as st
 from openai import OpenAI
 import sys
+from pathlib import Path
+from pypdf import PdfReader
 
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import chromadb
 
-from pathlib import Path
-from pypdf import PdfReader
 
-
-st.title("Lab 4 - Chatbot using RAG")
+st.title("Lab 4 - Course Information Chatbot")
 
 st.write(
-    "This chatbot uses a ChromaDB vector database containing the provided PDF files. "
-    "When you ask a question, the app searches the database for the most relevant "
-    "documents and gives that information to the chatbot as additional context."
+    "Ask questions about the course information contained in the provided documents. "
+    "The chatbot searches the documents for information related to your question and "
+    "uses the most relevant documents as context when creating its answer."
 )
 
 
@@ -111,9 +110,6 @@ if "Lab4_VectorDB" not in st.session_state:
     st.session_state.Lab4_VectorDB = create_vector_db()
 
 
-collection = st.session_state.Lab4_VectorDB
-
-
 def get_info_from_vectorDB(collection, prompt):
 
     client = st.session_state.openai_client
@@ -132,53 +128,22 @@ def get_info_from_vectorDB(collection, prompt):
 
     extra_info = ""
 
+    source_files = []
+
     for i in range(len(results["documents"][0])):
 
         document = results["documents"][0][i]
 
         file_name = results["ids"][0][i]
 
+        source_files.append(file_name)
+
         extra_info += (
-            f"\nDocument: {file_name}\n"
+            f"\nDOCUMENT: {file_name}\n"
             f"{document}\n"
         )
 
-    return extra_info
-
-
-topic = st.sidebar.text_input(
-    "Topic",
-    placeholder="Type your topic"
-)
-
-
-if topic:
-
-    client = st.session_state.openai_client
-
-    response = client.embeddings.create(
-        input=topic,
-        model="text-embedding-3-small"
-    )
-
-    query_embedding = response.data[0].embedding
-
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=3
-    )
-
-    st.sidebar.subheader(
-        f"Results for: {topic}"
-    )
-
-    for i in range(len(results["documents"][0])):
-
-        doc_id = results["ids"][0][i]
-
-        st.sidebar.write(
-            f"{i + 1}. {doc_id}"
-        )
+    return extra_info, source_files
 
 
 if "messages" not in st.session_state:
@@ -187,13 +152,16 @@ if "messages" not in st.session_state:
         {
             "role": "system",
             "content": (
-                "You are a helpful AI assistant. "
-                "Use the provided document context when answering questions."
+                "You are a helpful course information chatbot. "
+                "When information from the retrieved course documents is "
+                "provided, use that information to answer the user's question. "
+                "Be clear when your answer uses information retrieved from "
+                "the course documents."
             )
         },
         {
             "role": "assistant",
-            "content": "How can I help you?"
+            "content": "How can I help you with your course information?"
         }
     ]
 
@@ -202,13 +170,9 @@ for msg in st.session_state.messages:
 
     if msg["role"] != "system":
 
-        chat_msg = st.chat_message(
-            msg["role"]
-        )
+        chat_msg = st.chat_message(msg["role"])
 
-        chat_msg.write(
-            msg["content"]
-        )
+        chat_msg.write(msg["content"])
 
 
 def get_conversation_buffer(messages):
@@ -225,7 +189,7 @@ def get_conversation_buffer(messages):
 model_to_use = "gpt-5-nano"
 
 
-if prompt := st.chat_input("Ask a question about the documents"):
+if prompt := st.chat_input("Ask a question about the course"):
 
     st.session_state.messages.append(
         {
@@ -234,12 +198,13 @@ if prompt := st.chat_input("Ask a question about the documents"):
         }
     )
 
+
     with st.chat_message("user"):
 
         st.markdown(prompt)
 
 
-    extra_info = get_info_from_vectorDB(
+    extra_info, source_files = get_info_from_vectorDB(
         st.session_state.Lab4_VectorDB,
         prompt
     )
@@ -250,15 +215,24 @@ if prompt := st.chat_input("Ask a question about the documents"):
     )
 
 
+    rag_prompt = {
+        "role": "system",
+        "content": (
+            "Use the following retrieved course document information "
+            "to answer the user's question.\n\n"
+            "If the retrieved information supports your answer, make it clear "
+            "that you are using information from the course documents. "
+            "If the answer cannot be found in the retrieved information, "
+            "say that you could not find the answer in the retrieved course "
+            "documents. Do not make up course information.\n\n"
+            f"{extra_info}"
+        )
+    }
+
+
     messages_to_send.insert(
         1,
-        {
-            "role": "system",
-            "content": (
-                "Use the following context to answer the user's question:\n\n"
-                + extra_info
-            )
-        }
+        rag_prompt
     )
 
 
@@ -273,10 +247,17 @@ if prompt := st.chat_input("Ask a question about the documents"):
 
         response = st.write_stream(stream)
 
+        source_text = (
+            "\n\n**Documents used:** "
+            + ", ".join(source_files)
+        )
+
+        st.markdown(source_text)
+
 
     st.session_state.messages.append(
         {
             "role": "assistant",
-            "content": response
+            "content": response + source_text
         }
     )
