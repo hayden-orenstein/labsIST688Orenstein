@@ -18,16 +18,21 @@ week3_page = st.Page(
 
 week4_page = st.Page(
     ".pages/week4.py",
-    title="Week 4",
-    default=True
+    title="Week 4"
 )
 
+week5_page = st.Page(
+    ".pages/week5.py",
+    title="Week 5",
+    default=True
+)
 
 pg = st.navigation([
     week1_page,
     week2_page,
     week3_page,
-    week4_page
+    week4_page,
+    week5_page
 ])
 
 
